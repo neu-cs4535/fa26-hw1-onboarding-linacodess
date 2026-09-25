@@ -5,11 +5,13 @@ import { useGradebookWhatIfFeatureEnabled } from "@/hooks/useCourseFeatures";
 import {
   useGradebookColumn,
   useGradebookColumns,
+  useGradebookColumnGroups,
   useGradebookColumnStudent,
   useGradebookController,
   useLinkToAssignment,
   useSubmissionIDForColumn
 } from "@/hooks/useGradebook";
+import { buildGroupedColumns } from "@/lib/gradebookColumnGroups";
 import {
   GradebookWhatIfProvider,
   IncompleteValuesAdvice,
@@ -35,7 +37,6 @@ import {
 } from "@chakra-ui/react";
 
 import { Alert } from "@/components/ui/alert";
-import pluralize from "pluralize";
 import type { CSSProperties, MouseEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -471,7 +472,7 @@ function GroupHeader({
           <HStack as="span" gap={2}>
             <Icon as={isCollapsed ? LuChevronRight : LuChevronDown} boxSize={4} color="fg.muted" aria-hidden="true" />
             <Text as="span" fontWeight="bold" fontSize="sm" color="fg.muted">
-              {columnCount} {pluralize(groupName.charAt(0).toUpperCase() + groupName.slice(1))}...
+              {columnCount} {groupName}...
             </Text>
           </HStack>
         </HStack>
@@ -528,6 +529,7 @@ function CollapsedGroupColumn({
 
 export function WhatIf({ private_profile_id, whatIfEnabled }: { private_profile_id: string; whatIfEnabled: boolean }) {
   const columns = useGradebookColumns();
+  const columnGroups = useGradebookColumnGroups();
 
   // State for collapsible groups - use base group name as key for stability
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
@@ -539,64 +541,8 @@ export function WhatIf({ private_profile_id, whatIfEnabled }: { private_profile_
     return cols;
   }, [columns]);
 
-  // Group gradebook columns by slug prefix, with special handling for assignment sub-groups
-  const groupedColumns = useMemo(() => {
-    const groups: Record<string, { groupName: string; columns: GradebookColumn[] }> = {};
-
-    let currentGroupKey = "";
-    let currentGroupIndex = 0;
-    let lastSortOrder = -1;
-
-    sortedColumns.forEach((col) => {
-      const slugParts = col.slug.split("-");
-      let baseGroupName: string;
-
-      // Special handling for assignment columns
-      if (slugParts[0] === "assignment" && slugParts.length >= 3) {
-        // For assignment-assignment-*, assignment-lab-*, etc., use "assignment-{type}" as the base group
-        baseGroupName = `${slugParts[0]}-${slugParts[1]}`;
-      } else {
-        // For all other columns, use the first part as the base group
-        baseGroupName = slugParts[0] || "other";
-      }
-
-      // Check if this column is contiguous with the previous one
-      const currentSortOrder = col.sort_order ?? 0;
-      const isContiguous = lastSortOrder === -1 || currentSortOrder === lastSortOrder + 1;
-
-      // If not contiguous or different prefix, start a new group
-      if (!isContiguous || baseGroupName !== currentGroupKey) {
-        currentGroupKey = baseGroupName;
-        currentGroupIndex++;
-      }
-
-      const groupKey = `${baseGroupName}-${currentGroupIndex}`;
-
-      if (!groups[groupKey]) {
-        // Format group name for display
-        let displayName: string;
-        if (baseGroupName === "other") {
-          displayName = "Other";
-        } else if (baseGroupName.startsWith("assignment-")) {
-          // For assignment sub-groups, capitalize and format nicely
-          const subType = baseGroupName.split("-")[1];
-          displayName = `${subType.charAt(0).toUpperCase() + subType.slice(1)}`;
-        } else {
-          displayName = baseGroupName.charAt(0).toUpperCase() + baseGroupName.slice(1);
-        }
-
-        groups[groupKey] = {
-          groupName: displayName,
-          columns: []
-        };
-      }
-
-      groups[groupKey].columns.push(col);
-      lastSortOrder = currentSortOrder;
-    });
-
-    return groups;
-  }, [sortedColumns]);
+  // Read the stored grouping. See lib/gradebookColumnGroups.ts for what this replaced.
+  const groupedColumns = useMemo(() => buildGroupedColumns(sortedColumns, columnGroups), [sortedColumns, columnGroups]);
 
   // Initialize all groups as collapsed by default, but preserve existing collapsed state
   useEffect(() => {
