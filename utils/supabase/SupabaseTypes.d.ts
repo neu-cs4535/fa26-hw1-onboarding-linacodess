@@ -12560,6 +12560,23 @@ export type Database = {
         Args: { assignment_id: number; course_id: number; p_force?: boolean };
         Returns: undefined;
       };
+      create_gradebook_column_group: {
+        Args: { p_gradebook_id: number; p_name: string };
+        Returns: {
+          class_id: number;
+          created_at: string;
+          gradebook_id: number;
+          id: number;
+          name: string;
+          sort_order: number;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "gradebook_column_groups";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       create_help_request_message_notification: {
         Args: {
           p_author_name: string;
@@ -12749,6 +12766,10 @@ export type Database = {
       delete_assignment_with_all_data: {
         Args: { p_assignment_id: number; p_class_id: number };
         Returns: Json;
+      };
+      delete_gradebook_column_group: {
+        Args: { p_group_id: number };
+        Returns: undefined;
       };
       delete_queued_messages_for_class: {
         Args: { p_class_id: number };
@@ -13458,6 +13479,14 @@ export type Database = {
         Args: { p_gradebook_id: number };
         Returns: undefined;
       };
+      gradebook_column_group_name_for_slug: {
+        Args: { p_slug: string };
+        Returns: string;
+      };
+      gradebook_column_group_pluralise: {
+        Args: { p_word: string };
+        Returns: string;
+      };
       gradebook_column_move_left: {
         Args: { p_column_id: number };
         Returns: {
@@ -13886,6 +13915,27 @@ export type Database = {
         Args: { p_column_id: number };
         Returns: undefined;
       };
+      rename_gradebook_column_group: {
+        Args: { p_group_id: number; p_name: string };
+        Returns: {
+          class_id: number;
+          created_at: string;
+          gradebook_id: number;
+          id: number;
+          name: string;
+          sort_order: number;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "gradebook_column_groups";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      reorder_gradebook_column_groups: {
+        Args: { p_group_ids: number[] };
+        Returns: number;
+      };
       reorder_surveys_in_series: {
         Args: { p_ordinal_updates: Json; p_series_id: string };
         Returns: undefined;
@@ -13967,6 +14017,10 @@ export type Database = {
       set_discussion_thread_visibility: {
         Args: { p_instructors_only: boolean; p_thread_id: number };
         Returns: undefined;
+      };
+      set_gradebook_column_group: {
+        Args: { p_column_ids: number[]; p_group_id?: number };
+        Returns: number;
       };
       set_pr_state: {
         Args: {

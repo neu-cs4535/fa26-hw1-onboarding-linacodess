@@ -97,9 +97,11 @@ $$;
 --
 -- This is the operation the whole feature exists for: the slug-derived default the insert trigger
 -- applied is a suggestion, and this is how an instructor overrules it.
+-- p_group_id defaults to null so "remove from every group" is expressible, and so the generated
+-- client type treats it as optional rather than required.
 create or replace function public.set_gradebook_column_group(
     p_column_ids bigint[],
-    p_group_id bigint
+    p_group_id bigint default null
 )
 returns integer
 language plpgsql

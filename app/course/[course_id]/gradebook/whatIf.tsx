@@ -542,10 +542,7 @@ export function WhatIf({ private_profile_id, whatIfEnabled }: { private_profile_
   }, [columns]);
 
   // Read the stored grouping. See lib/gradebookColumnGroups.ts for what this replaced.
-  const groupedColumns = useMemo(
-    () => buildGroupedColumns(sortedColumns, columnGroups),
-    [sortedColumns, columnGroups]
-  );
+  const groupedColumns = useMemo(() => buildGroupedColumns(sortedColumns, columnGroups), [sortedColumns, columnGroups]);
 
   // Initialize all groups as collapsed by default, but preserve existing collapsed state
   useEffect(() => {

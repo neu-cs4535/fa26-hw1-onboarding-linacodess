@@ -28,6 +28,7 @@ import {
   useStudentDetailView
 } from "@/hooks/useGradebook";
 import { buildGroupedColumns, findGroupEntryForColumn } from "@/lib/gradebookColumnGroups";
+import { GroupHeaderMenu, MoveColumnToGroupMenuItems } from "@/components/gradebook/columnGroupControls";
 import { GradebookWhatIfProvider } from "@/hooks/useGradebookWhatIf";
 import { createClient } from "@/utils/supabase/client";
 import {
@@ -1996,6 +1997,7 @@ function GradebookColumnHeader({
                 {isMovingRight ? <Spinner size="xs" mr={2} /> : <Icon as={LuArrowRight} boxSize={3} mr={2} />}
                 Move Right
               </MenuItem>
+              <MoveColumnToGroupMenuItems columnId={column_id} currentGroupId={column.group_id} />
               {(!column.score_expression || column.instructor_only) && (
                 <>
                   <MenuSeparator />
@@ -3194,6 +3196,7 @@ export default function GradebookTable() {
       width: number;
       key: string;
       groupName: string;
+      groupId: number | null;
       isCollapsed: boolean;
       groupColumnsLen: number;
     };
@@ -3216,6 +3219,8 @@ export default function GradebookTable() {
         continue;
       }
       const group = groupEntry[1];
+      // Keys are "group-<id>" for a stored group and "ungrouped-<columnId>" otherwise.
+      const groupId = groupEntry[0].startsWith("group-") ? Number(groupEntry[0].slice(6)) : null;
       const groupColumns = group.columns;
       const isFirstInGroup = groupColumns[0].id === columnId;
       const isCollapsed = collapsedGroups.has(group.groupName);
@@ -3233,6 +3238,7 @@ export default function GradebookTable() {
           width,
           key: `grp-${group.groupName}-${columnId}`,
           groupName: group.groupName,
+          groupId,
           isCollapsed,
           groupColumnsLen: groupColumns.length
         });
@@ -3665,10 +3671,10 @@ export default function GradebookTable() {
                               color="fg.muted"
                             />
                             <Text fontWeight="bold" fontSize="sm" color="fg.muted">
-                              {seg.groupColumnsLen}{" "}
-                              {seg.groupName}
+                              {seg.groupColumnsLen} {seg.groupName}
                               ...
                             </Text>
+                            <GroupHeaderMenu groupId={seg.groupId} groupName={seg.groupName} />
                           </HStack>
                         </Box>
                       ))}
