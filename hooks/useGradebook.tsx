@@ -135,6 +135,29 @@ export function useGradebookColumns() {
   return columns;
 }
 
+export type GradebookColumnGroup = Database["public"]["Tables"]["gradebook_column_groups"]["Row"];
+
+/**
+ * Live list of the gradebook's column groups.
+ *
+ * Groups used to be derived at render time by splitting `slug` on "-" and breaking the run
+ * wherever `sort_order` skipped a value. That guess was recomputed on every render, duplicated
+ * across four call sites, and could not be corrected by an instructor because it was never
+ * stored. Membership now lives in `gradebook_columns.group_id`, so this hook just reads it.
+ */
+export function useGradebookColumnGroups() {
+  const gradebookController = useGradebookController();
+  const [groups, setGroups] = useState<GradebookColumnGroup[]>(gradebookController.gradebook_column_groups.rows);
+
+  useEffect(() => {
+    return gradebookController.gradebook_column_groups.list((data) => {
+      setGroups(data);
+    }).unsubscribe;
+  }, [gradebookController]);
+
+  return groups;
+}
+
 /**
  * Subscribes to changes in `gradebooks.expression_prefix` so any component
  * that depends on the prefix (e.g. the Expression Builder's render-expression
@@ -1401,10 +1424,11 @@ export class GradebookController {
   /** Single-row controller for this gradebook (hydrates expression_prefix, etc.). */
   readonly gradebook_row: TableController<"gradebooks">;
   readonly gradebook_columns: TableController<"gradebook_columns">;
+  readonly gradebook_column_groups: TableController<"gradebook_column_groups">;
   readonly table: GradebookCellController;
   readonly assignments_table: TableController<"assignments">;
 
-  readonly readyPromise: Promise<[void, void, void, void]>;
+  readonly readyPromise: Promise<[void, void, void, void, void]>;
 
   public studentSubmissions: Map<string, Database["public"]["Views"]["active_submissions_for_class"]["Row"][]> =
     new Map();
@@ -1446,6 +1470,12 @@ export class GradebookController {
       query: client.from("gradebook_columns").select("*").eq("gradebook_id", gradebook_id),
       classRealTimeController
     });
+    this.gradebook_column_groups = new TableController({
+      client,
+      table: "gradebook_column_groups",
+      query: client.from("gradebook_column_groups").select("*").eq("gradebook_id", gradebook_id),
+      classRealTimeController
+    });
     const { unsubscribe: gradebookRowUnsubscribe } = this.gradebook_row.list(() => {
       // Prefix lives on gradebooks.expression_prefix; recompute renderers when the row updates.
       this.syncCellRenderersFromColumns(this.gradebook_columns.rows);
@@ -1470,6 +1500,7 @@ export class GradebookController {
     this.readyPromise = Promise.all([
       this.gradebook_row.readyPromise,
       this.gradebook_columns.readyPromise,
+      this.gradebook_column_groups.readyPromise,
       this.table.readyPromise,
       this.assignments_table.readyPromise
     ]);
@@ -1533,6 +1564,7 @@ export class GradebookController {
   close() {
     this.gradebook_row.close();
     this.gradebook_columns.close();
+    this.gradebook_column_groups.close();
     this.table.close();
     this.assignments_table.close();
     this._unsubscribes.forEach((unsubscribe) => unsubscribe());
